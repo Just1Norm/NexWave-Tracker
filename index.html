@@ -43,7 +43,7 @@
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
     label {
-      color: var(--muted);
+      color: var(--teal);
       font-size: 0.7rem;
       font-weight: 700;
       letter-spacing: 0.6px;
@@ -73,12 +73,34 @@
       height: 52px;
     }
     #logo {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      flex-shrink: 0;
+      line-height: 1;
+      gap: 0px;
+      padding: 2px 0;
+    }
+    #logo-top {
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 900;
-      font-size: 1.3rem;
-      color: var(--teal);
+      font-size: 1.5rem;
       letter-spacing: 2px;
-      flex-shrink: 0;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    #logo-top .nex { color: var(--white); }
+    #logo-top .wave { color: var(--teal); }
+    #logo-sub {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 700;
+      font-size: 0.48rem;
+      color: var(--teal);
+      letter-spacing: 5.5px;
+      text-transform: uppercase;
+      text-align: right;
+      width: 100%;
+      margin-top: 1px;
     }
     #nav { display: flex; gap: 2px; flex: 1; flex-wrap: wrap; }
     .nav-btn {
@@ -90,7 +112,7 @@
       white-space: nowrap;
       transition: all .15s;
       background: transparent;
-      color: var(--muted);
+      color: var(--teal);
       border-bottom: 2px solid transparent;
       font-weight: 600;
     }
@@ -116,7 +138,7 @@
       height: 44px;
     }
     .month-label {
-      color: var(--muted);
+      color: var(--teal);
       font-size: 0.68rem;
       font-weight: 700;
       letter-spacing: 1px;
@@ -144,7 +166,7 @@
     #month-dropdown-btn:hover { border-color: var(--teal); }
     #month-dropdown-btn .arrow {
       font-size: 0.6rem;
-      color: var(--muted);
+      color: var(--teal);
       transition: transform .2s;
     }
     #month-dropdown-btn.open .arrow { transform: rotate(180deg); }
@@ -414,7 +436,7 @@
     thead tr { background: #0d0f16; border-bottom: 1px solid var(--border); }
     th {
       padding: 9px 10px;
-      color: var(--muted);
+      color: var(--teal);
       font-weight: 700;
       font-size: 0.68rem;
       letter-spacing: 0.6px;
@@ -475,7 +497,7 @@
       font-size: 0.85rem;
       letter-spacing: 1px;
       text-transform: uppercase;
-      color: var(--muted);
+      color: var(--teal);
     }
     .bar-track { background: var(--bg); border-radius: 4px; height: 6px; }
     .bar-fill { height: 6px; border-radius: 4px; background: var(--teal); }
@@ -514,7 +536,7 @@
       border-radius: 9px;
       border: 1px solid var(--border);
       background: transparent;
-      color: var(--muted);
+      color: var(--teal);
       cursor: pointer;
       font-size: 0.875rem;
       font-weight: 600;
@@ -557,7 +579,7 @@
     .empty-state {
       text-align: center;
       padding: 60px 20px;
-      color: var(--muted);
+      color: var(--teal);
     }
     .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
     .empty-title { font-weight: 700; font-size: 1rem; margin-bottom: 6px; color: var(--light); }
@@ -625,9 +647,8 @@
 
     @media (max-width: 600px) {
       #header-inner { gap: 8px; }
-      #logo { font-size: 1rem; }
-      .nav-btn { font-size: 0.72rem; padding: 4px 8px; }
-      #main { padding: 14px 10px; }
+      #logo-top { font-size: 1.1rem; letter-spacing: 1.5px; }
+      #logo-sub { font-size: 0.42rem; letter-spacing: 4px; }
     }
   </style>
 </head>
@@ -652,7 +673,7 @@
 <!-- ══ HEADER ══ -->
 <div id="header">
   <div id="header-inner">
-    <div id="logo">⚡ NEXWAVE</div>
+    <div id="logo"><div id="logo-top"><span class="nex">NEX</span><span class="wave">WAVE</span></div><div id="logo-sub">LIGHTING</div></div>
     <div id="nav">
       <button class="nav-btn active" data-view="add" onclick="switchView('add')">＋ New Job</button>
       <button class="nav-btn" data-view="list" onclick="switchView('list')">⊟ Jobs</button>
