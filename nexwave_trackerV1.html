@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexwave Lighting — Job Tracker</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #090a0e;
+      --surface: #111318;
+      --surfaceHi: #191c26;
+      --border: #252836;
+      --teal: #00d4c8;
+      --tealDim: #009e94;
+      --green: #4caf7d;
+      --red: #e05c5c;
+      --blue: #5b8ef0;
+      --white: #ffffff;
+      --light: #d0d4e8;
+      --muted: #8890aa;
+      --dim: #3a3d52;
+    }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Barlow', 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+    input, select, textarea {
+      font-family: inherit;
+      color: var(--white);
+      background: var(--bg);
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--teal) !important;
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+    label {
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .hov:hover { background: var(--surfaceHi) !important; cursor: pointer; }
+    .bhov:hover { opacity: 0.85; }
+    button { font-family: inherit; }
+
+    /* ── Header ── */
+    #header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    #header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 52px;
+    }
+    #logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 1.3rem;
+      color: var(--teal);
+      letter-spacing: 2px;
+      flex-shrink: 0;
+    }
+    #nav { display: flex; gap: 2px; flex: 1; flex-wrap: wrap; }
+    .nav-btn {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      transition: all .15s;
+      background: transparent;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      font-weight: 600;
+    }
+    .nav-btn.active {
+      background: rgba(0,212,200,0.12);
+      color: var(--teal);
+      border-bottom: 2px solid var(--teal);
+    }
+    #header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    /* ── Month bar ── */
+    #month-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    #month-bar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      height: 44px;
+    }
+    .month-label {
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    /* Month dropdown */
+    #month-dropdown-wrap { position: relative; flex-shrink: 0; }
+    #month-dropdown-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px 5px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--teal);
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color .15s;
+      white-space: nowrap;
+    }
+    #month-dropdown-btn:hover { border-color: var(--teal); }
+    #month-dropdown-btn .arrow {
+      font-size: 0.6rem;
+      color: var(--muted);
+      transition: transform .2s;
+    }
+    #month-dropdown-btn.open .arrow { transform: rotate(180deg); }
+    #month-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      min-width: 180px;
+      background: var(--surface);
+      border: 1px solid var(--teal);
+      border-radius: 10px;
+      z-index: 99;
+      overflow: hidden;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+    }
+    #month-dropdown-menu.open { display: block; }
+    .month-option {
+      padding: 9px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--light);
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    .month-option:last-child { border-bottom: none; }
+    .month-option:hover { background: var(--surfaceHi); }
+    .month-option.active { color: var(--teal); font-weight: 800; background: rgba(0,212,200,0.08); }
+
+    /* ── Storage warning ── */
+    #storage-warning {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(224,92,92,0.1);
+      border: 1px solid rgba(224,92,92,0.3);
+      font-size: 0.68rem;
+      color: #e8a0a0;
+      font-weight: 600;
+      cursor: help;
+      position: relative;
+      flex-shrink: 0;
+    }
+    #storage-warning .warn-icon { font-size: 0.8rem; }
+    #storage-warning .warn-tooltip {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 280px;
+      background: #1a0e0e;
+      border: 1px solid rgba(224,92,92,0.4);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 0.75rem;
+      color: var(--light);
+      line-height: 1.55;
+      z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+    #storage-warning .warn-tooltip strong { color: var(--red); }
+    #storage-warning .warn-tooltip .tip { color: var(--green); margin-top:6px; display:block; }
+    #storage-warning:hover .warn-tooltip { display: block; }
+
+    /* ── Main ── */
+    #main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 14px;
+    }
+
+    /* ── Stat cards ── */
+    #stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .stat-val { font-size: 1.15rem; font-weight: 900; letter-spacing: -0.5px; }
+    .stat-lbl { font-size: 0.68rem; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; }
+
+    /* ── Form ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      margin-bottom: 8px;
+    }
+    .section-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 0.75rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--teal);
+    }
+    .section-line { flex: 1; height: 1px; background: var(--border); }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 10px;
+    }
+    .form-field { display: flex; flex-direction: column; }
+    .form-field.span2 { grid-column: span 2; }
+    .form-field.span3 { grid-column: span 3; }
+    .field-error { font-size: 0.68rem; color: var(--red); margin-top: 2px; }
+    .input-wrap { position: relative; }
+    .field-input {
+      height: 38px;
+      width: 100%;
+      padding: 0 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--white);
+      font-size: 0.875rem;
+      transition: border-color .15s;
+    }
+    .field-input.highlight {
+      border-color: rgba(0,212,200,0.53);
+      color: var(--teal);
+      font-weight: 700;
+    }
+    .field-input.error-border { border-color: var(--red); }
+    .field-select {
+      height: 38px;
+      width: 100%;
+      padding: 0 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .field-readonly {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .toggle-btn {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 700;
+      width: 100%;
+      text-align: left;
+      transition: all .15s;
+    }
+    .toggle-box {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 900;
+      flex-shrink: 0;
+      color: #000;
+    }
+    textarea.field-input {
+      height: auto;
+      min-height: 80px;
+      padding: 9px 12px;
+      resize: vertical;
+    }
+
+    /* ── Crew picker ── */
+    .crew-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--surface);
+      border: 1px solid var(--teal);
+      border-radius: 8px;
+      z-index: 100;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      display: none;
+    }
+    .crew-dropdown.open { display: block; }
+    .crew-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    .crew-item:hover { background: var(--surfaceHi); }
+    .crew-item.selected { background: rgba(0,212,200,0.12); }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    thead tr { background: #0d0f16; border-bottom: 1px solid var(--border); }
+    th {
+      padding: 9px 10px;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.68rem;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+      text-align: left;
+    }
+    th.right { text-align: right; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+    tbody tr:nth-child(even) { background: #0d0f14; }
+    td { padding: 8px 10px; }
+    td.right { text-align: right; }
+
+    /* ── Badge ── */
+    .badge {
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .badge-teal { background: #0a2422; color: var(--teal); }
+    .badge-paid { background: #0d2a1a; color: var(--green); }
+    .badge-pending { background: #1a0e0e; color: var(--red); }
+    .status-paid { padding: 3px 8px; border-radius: 8px; font-size: 0.68rem; font-weight: 700; background: #0d2a1a; color: var(--green); }
+    .status-pending { padding: 3px 8px; border-radius: 8px; font-size: 0.68rem; font-weight: 700; background: #1a0e0e; color: var(--red); }
+
+    /* ── Detail grid ── */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+    .detail-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .detail-card.full { grid-column: 1 / -1; border-color: rgba(0,212,200,0.27); }
+    .detail-lbl { font-size: 0.64rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-bottom: 4px; }
+    .detail-val { font-weight: 700; font-size: 0.88rem; color: var(--white); }
+
+    /* ── Dashboard ── */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .dash-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .dash-title {
+      font-weight: 800;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .bar-track { background: var(--bg); border-radius: 4px; height: 6px; }
+    .bar-fill { height: 6px; border-radius: 4px; background: var(--teal); }
+
+    /* ── Weekly export banner ── */
+    #export-banner {
+      background: linear-gradient(135deg, rgba(0,212,200,0.12), rgba(0,212,200,0.04));
+      border: 1px solid rgba(0,212,200,0.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    #export-banner-text { font-size: 0.82rem; color: var(--light); }
+    #export-banner-text strong { color: var(--teal); }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      padding: 11px 32px;
+      border-radius: 9px;
+      border: none;
+      background: var(--teal);
+      color: #000;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      font-family: inherit;
+    }
+    .btn-ghost {
+      padding: 11px 18px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: inherit;
+    }
+    .btn-sm {
+      padding: 5px 12px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surfaceHi);
+      color: var(--light);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .btn-teal-header {
+      padding: 6px 14px;
+      border-radius: 7px;
+      border: none;
+      background: var(--teal);
+      color: #000;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 800;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .btn-edit-sm {
+      background: var(--surfaceHi);
+      border: 1px solid var(--border);
+      color: var(--light);
+      padding: 3px 9px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-family: inherit;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-title { font-weight: 700; font-size: 1rem; margin-bottom: 6px; color: var(--light); }
+
+    /* ── Saved toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0d2a1a;
+      color: var(--green);
+      border: 1px solid var(--green);
+      padding: 10px 20px;
+      border-radius: 9px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      z-index: 200;
+      display: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    /* ── Weekly export modal ── */
+    #modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #modal-overlay.open { display: flex; }
+    #modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+    #modal h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 1.3rem;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+    #modal p { color: var(--light); font-size: 0.875rem; margin-bottom: 20px; line-height: 1.5; }
+    .week-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .week-option:hover { border-color: var(--teal); background: rgba(0,212,200,0.06); }
+    .week-option-label { font-weight: 700; font-size: 0.88rem; }
+    .week-option-count { font-size: 0.75rem; color: var(--muted); }
+
+    @media (max-width: 600px) {
+      #header-inner { gap: 8px; }
+      #logo { font-size: 1rem; }
+      .nav-btn { font-size: 0.72rem; padding: 4px 8px; }
+      #main { padding: 14px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ TOAST ══ -->
+<div id="toast">✓ Job Saved!</div>
+
+<!-- ══ WEEKLY EXPORT MODAL ══ -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h2>📊 Weekly Export</h2>
+    <p>Choose which week to export to Excel. Dani can then upload this file to the shared Excel sheet.</p>
+    <div id="week-list"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="exportAllMonth()" style="padding:9px 20px;font-size:0.85rem;">Export Full Month</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<div id="header">
+  <div id="header-inner">
+    <div id="logo">⚡ NEXWAVE</div>
+    <div id="nav">
+      <button class="nav-btn active" data-view="add" onclick="switchView('add')">＋ New Job</button>
+      <button class="nav-btn" data-view="list" onclick="switchView('list')">⊟ Jobs</button>
+      <button class="nav-btn" data-view="dashboard" onclick="switchView('dashboard')">▪ Dashboard</button>
+    </div>
+    <div id="header-actions" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <!-- Storage Warning -->
+      <div id="storage-warning">
+        <span class="warn-icon">⚠️</span>
+        <span>Data stored locally</span>
+        <div class="warn-tooltip">
+          <strong>⚠️ Important — Please Read</strong><br><br>
+          All job data is saved in <strong>this browser only</strong> on this computer. It will <strong>not appear</strong> on any other device or browser.<br><br>
+          <strong>Do not clear your browser history</strong> or check "clear site data" — this will permanently erase all saved jobs.<br><br>
+          <span class="tip">✓ Tip: Export weekly to Excel as your backup. The Excel file is your safety net.</span>
+        </div>
+      </div>
+      <button class="btn-sm bhov" onclick="openWeeklyExportModal()">📊 Weekly Export</button>
+      <button class="btn-teal-header bhov" onclick="startNew()">+ NEW JOB</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MONTH BAR ══ -->
+<div id="month-bar">
+  <div id="month-bar-inner">
+    <span class="month-label">Month:</span>
+    <!-- Month dropdown -->
+    <div id="month-dropdown-wrap">
+      <button id="month-dropdown-btn" onclick="toggleMonthDropdown()">
+        <span id="month-dropdown-label">Loading…</span>
+        <span class="arrow">▼</span>
+      </button>
+      <div id="month-dropdown-menu"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div id="main">
+
+  <!-- ── STAT CARDS ── -->
+  <div id="stat-grid" style="display:none;"></div>
+
+  <!-- ── EXPORT BANNER (shown on list view) ── -->
+  <div id="export-banner" style="display:none;">
+    <div id="export-banner-text">
+      <strong>📅 Weekly Export Reminder</strong> — Export this week's jobs so Dani can update the shared Excel sheet.
+    </div>
+    <button class="btn-sm" onclick="openWeeklyExportModal()">📊 Export This Week</button>
+  </div>
+
+  <!-- ── VIEWS ── -->
+  <div id="view-add"></div>
+  <div id="view-list" style="display:none;"></div>
+  <div id="view-detail" style="display:none;"></div>
+  <div id="view-dashboard" style="display:none;"></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════
+   DATA & CONSTANTS
+══════════════════════════════════════════════════ */
+const STORAGE_KEY = "nexwave_jobs_v1";
+const PAYMENT_OPTS = ["Credit Card","Check","Cash","Bank Transfer","Financed / Wisetack","Other"];
+const PRODUCTS = ["Bosso","Jellyfish","Nexwave","Other"];
+const TRACK_COLORS = ["Almond","Black","Cameo","Char. Grey","Classic Cream","Dark Bronze",
+  "Desert Sand","Harbor Grey","Linen","London Brown","Montana Suede","Musket Brown","P.Clay",
+  "Royal Brown","Sandstone","Terra Bronze","Vic. Grey","White","Wicker","Other"];
+const SALESMEN = ["Ben","Brad","Chris","Doug","Gabe"];
+const INSTALLERS = ["Micah","Jaime","Richard","Victor"];
+const COMM_PCTS = ["0","5","10","15","20","25","30","35"];
+
+let jobs = [];
+let activeMonth = curMonth();
+let currentView = "add";
+let editingId = null;
+let detailJobId = null;
+let crewOpen = false;
+
+function curMonth() {
+  const d = new Date();
+  return d.toLocaleString("default",{month:"long"}) + " " + d.getFullYear();
+}
+
+function uid() { return Math.random().toString(36).slice(2,9); }
+
+function fmt$(v) {
+  if (v == null || v === "" || isNaN(v)) return "—";
+  return "$" + Number(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtFt(v) { return (v != null && v !== "") ? Number(v).toLocaleString() + " ft" : "—"; }
+function fmtDate(s) {
+  if (!s) return "—";
+  const d = new Date(s);
+  return isNaN(d) ? s : d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+}
+
+function calcJob(j) {
+  const sub = parseFloat(j.subtotal) || 0;
+  const disc = parseFloat(j.discount) || 0;
+  const total = parseFloat(j.totalCost) > 0 ? parseFloat(j.totalCost) : Math.max(0, sub - disc);
+  const pct = parseFloat(j.commissionPct) || 0;
+  const comm = +(total * pct / 100).toFixed(2);
+  const half = +(comm / 2).toFixed(2);
+  const ftS = parseFloat(j.feetSold) || 0;
+  const ftI = parseFloat(j.feetInstalled) || 0;
+  const ou = ftI > 0 ? ftS - ftI : null;
+  const ppfA = ftI > 0 && total > 0 ? +(total / ftI).toFixed(2) : null;
+  return { total, comm, half, ou, ppfA };
+}
+
+/* ══════════════════════════════════════════════════
+   STORAGE — localStorage
+══════════════════════════════════════════════════ */
+function loadJobs() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveJobs() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
+}
+
+/* ══════════════════════════════════════════════════
+   MONTHS
+══════════════════════════════════════════════════ */
+function getMonths() {
+  const s = new Set([curMonth(), ...jobs.map(j => j.month)]);
+  return Array.from(s).sort((a,b) => new Date(b) - new Date(a));
+}
+
+let monthDropdownOpen = false;
+
+function toggleMonthDropdown() {
+  monthDropdownOpen = !monthDropdownOpen;
+  const btn = document.getElementById("month-dropdown-btn");
+  const menu = document.getElementById("month-dropdown-menu");
+  btn.classList.toggle("open", monthDropdownOpen);
+  menu.classList.toggle("open", monthDropdownOpen);
+}
+
+function closeMonthDropdown() {
+  monthDropdownOpen = false;
+  const btn = document.getElementById("month-dropdown-btn");
+  const menu = document.getElementById("month-dropdown-menu");
+  if (btn) btn.classList.remove("open");
+  if (menu) menu.classList.remove("open");
+}
+
+document.addEventListener("click", function(e) {
+  const wrap = document.getElementById("month-dropdown-wrap");
+  if (wrap && !wrap.contains(e.target)) closeMonthDropdown();
+});
+
+function renderMonthTabs() {
+  const months = getMonths();
+  const label = document.getElementById("month-dropdown-label");
+  const menu = document.getElementById("month-dropdown-menu");
+  if (label) label.textContent = activeMonth;
+  if (menu) {
+    menu.innerHTML = months.map(m => `
+      <div class="month-option${m === activeMonth ? " active" : ""}" onclick="selectMonth('${m}')">
+        ${m}${m === activeMonth ? " ✓" : ""}
+      </div>
+    `).join("");
+  }
+}
+
+function selectMonth(m) {
+  activeMonth = m;
+  closeMonthDropdown();
+  renderMonthTabs();
+  renderCurrentView();
+}
+
+/* ══════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════ */
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll(".nav-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.view === v);
+  });
+  // Update new job label
+  document.querySelector('[data-view="add"]').textContent = editingId ? "✏ Edit Job" : "＋ New Job";
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  ["add","list","detail","dashboard"].forEach(v => {
+    document.getElementById("view-" + v).style.display = v === currentView ? "" : "none";
+  });
+  const showStats = currentView === "list" || currentView === "dashboard";
+  document.getElementById("stat-grid").style.display = showStats ? "grid" : "none";
+  document.getElementById("export-banner").style.display = currentView === "list" ? "flex" : "none";
+
+  if (showStats) renderStats();
+  if (currentView === "add") renderForm();
+  if (currentView === "list") renderList();
+  if (currentView === "detail") renderDetail();
+  if (currentView === "dashboard") renderDashboard();
+}
+
+function startNew() {
+  editingId = null;
+  document.querySelector('[data-view="add"]').textContent = "＋ New Job";
+  switchView("add");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ══════════════════════════════════════════════════
+   STATS
+══════════════════════════════════════════════════ */
+function renderStats() {
+  const mj = jobs.filter(j => j.month === activeMonth);
+  const revenue = mj.reduce((s,j) => s + calcJob(j).total, 0);
+  const parts = mj.reduce((s,j) => s + (parseFloat(j.costOfParts)||0), 0);
+  const comm = mj.reduce((s,j) => s + calcJob(j).comm, 0);
+  const ft = mj.reduce((s,j) => s + (parseFloat(j.feetInstalled)||parseFloat(j.feetSold)||0), 0);
+  const paid = mj.filter(j => j.finalPaymentPaid).length;
+
+  const items = [
+    {label:"Revenue", val:fmt$(revenue), color:"var(--teal)"},
+    {label:"Jobs", val:mj.length, color:"var(--white)"},
+    {label:"Completed", val:`${paid}/${mj.length}`, color:"var(--green)"},
+    {label:"Feet", val:fmtFt(ft), color:"var(--blue)"},
+    {label:"Parts Cost", val:fmt$(parts), color:"var(--red)"},
+    {label:"Commission", val:fmt$(comm), color:"#7eeae6"},
+  ];
+  const grid = document.getElementById("stat-grid");
+  grid.innerHTML = items.map(s => `
+    <div class="stat-card">
+      <div class="stat-val" style="color:${s.color}">${s.val}</div>
+      <div class="stat-lbl">${s.label}</div>
+    </div>
+  `).join("");
+}
+
+/* ══════════════════════════════════════════════════
+   FORM STATE
+══════════════════════════════════════════════════ */
+let formData = blankForm();
+let formErrors = {};
+
+function blankForm() {
+  return {
+    customer:"", jobNumber:"", feetSold:"", feetInstalled:"",
+    subtotal:"", discount:"", totalCost:"", ppfSold:"",
+    paymentType:"", depositDate:"", costOfParts:"",
+    product:"", trackColor:"", installDate:"", finalPaymentDate:"",
+    finalPaymentPaid:false, crew:"", salesman:"", commissionPct:"10",
+    firstCommissionPaid:false, firstCommissionDate:"",
+    finalCommissionPaid:false, finalCommissionDate:"", notes:""
+  };
+}
+
+function setField(field, value) {
+  formData[field] = value;
+  delete formErrors[field];
+
+  // Auto-calc totalCost
+  if (field === "subtotal" || field === "discount") {
+    const sub = parseFloat(field==="subtotal"?value:formData.subtotal)||0;
+    const disc = parseFloat(field==="discount"?value:formData.discount)||0;
+    formData.totalCost = String(+(Math.max(0,sub-disc)).toFixed(2));
+  }
+  // Auto-calc PPF
+  const cost = parseFloat(formData.totalCost)||0;
+  const ft = parseFloat(formData.feetSold)||0;
+  if (["totalCost","subtotal","discount","feetSold"].includes(field) && cost>0 && ft>0) {
+    formData.ppfSold = String(+(cost/ft).toFixed(2));
+  }
+
+  renderForm();
+}
+
+/* ══════════════════════════════════════════════════
+   RENDER FORM
+══════════════════════════════════════════════════ */
+function renderForm() {
+  const fCalc = calcJob(formData);
+  const ouText = fCalc.ou != null
+    ? (fCalc.ou===0?"Even":(fCalc.ou>0?"+":"")+fCalc.ou+" ft") : "—";
+  const ouColor = fCalc.ou==null?"var(--muted)":fCalc.ou>0?"var(--green)":fCalc.ou<0?"var(--red)":"var(--muted)";
+
+  const crewSelected = formData.crew ? formData.crew.split("/").map(s=>s.trim()).filter(Boolean) : [];
+  const crewDisplay = crewSelected.length===0 ? "— Select Crew —" : crewSelected.join(" / ");
+
+  document.getElementById("view-add").innerHTML = `
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:1px;">
+          ${editingId ? "EDIT JOB" : "NEW JOB"}
+        </span>
+        <span style="background:rgba(0,212,200,0.12);color:var(--teal);padding:3px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;">${activeMonth}</span>
+      </div>
+
+      <!-- CUSTOMER INFO -->
+      <div class="section-header"><span class="section-title">Customer Info</span><div class="section-line"></div></div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label style="color:${formErrors.customer?'var(--red)':'var(--muted)'}">Customer Name *</label>
+          <input class="field-input${formErrors.customer?' error-border':''}" value="${esc(formData.customer)}" oninput="setField('customer',this.value)" placeholder="Full name" />
+          ${formErrors.customer?`<span class="field-error">${formErrors.customer}</span>`:""}
+        </div>
+        <div class="form-field">
+          <label style="color:${formErrors.jobNumber?'var(--red)':'var(--muted)'}">Job Number *</label>
+          <input class="field-input${formErrors.jobNumber?' error-border':''}" value="${esc(formData.jobNumber)}" oninput="setField('jobNumber',this.value)" placeholder="e.g. 1042" />
+          ${formErrors.jobNumber?`<span class="field-error">${formErrors.jobNumber}</span>`:""}
+        </div>
+        <div class="form-field">
+          <label>Salesman</label>
+          ${selectHtml("formData.salesman","salesman",[""].concat(SALESMEN),formData.salesman)}
+        </div>
+        <div class="form-field span2">
+          <label>Install Crew</label>
+          <div class="input-wrap" style="position:relative;">
+            <button type="button" onclick="toggleCrew()" style="height:38px;width:100%;padding:0 32px 0 12px;border-radius:8px;border:1px solid ${crewOpen?'var(--teal)':'var(--border)'};background:var(--bg);color:${crewSelected.length?'var(--white)':'var(--muted)'};font-size:0.875rem;font-weight:${crewSelected.length?600:400};cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;font-family:inherit;">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${crewDisplay}</span>
+              <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%) rotate(${crewOpen?180:0}deg);color:var(--muted);font-size:0.65rem;transition:transform .2s;pointer-events:none;">▼</span>
+            </button>
+            <div class="crew-dropdown${crewOpen?' open':''}">
+              ${INSTALLERS.map(name => {
+                const on = crewSelected.includes(name);
+                return `<div class="crew-item${on?' selected':''}" onclick="toggleCrewMember('${name}')">
+                  <div class="toggle-box" style="border:2px solid ${on?'var(--teal)':'var(--dim)'};background:${on?'var(--teal)':'transparent'};">${on?"✓":""}</div>
+                  <span style="font-weight:${on?700:400};color:${on?'var(--teal)':'var(--white)'};font-size:0.875rem;">${name}</span>
+                </div>`;
+              }).join("")}
+              <div style="padding:8px 14px;cursor:pointer;text-align:center;font-size:0.73rem;font-weight:700;color:var(--muted);background:var(--bg);" onclick="crewOpen=false;renderForm();">Done ✓</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Product</label>
+          ${selectHtml("formData.product","product",[""].concat(PRODUCTS),formData.product)}
+        </div>
+        <div class="form-field">
+          <label>Track Color</label>
+          ${selectHtml("formData.trackColor","trackColor",[""].concat(TRACK_COLORS),formData.trackColor)}
+        </div>
+      </div>
+
+      <!-- MEASUREMENTS -->
+      <div class="section-header"><span class="section-title">Measurements</span><div class="section-line"></div></div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Feet Sold</label>
+          <input class="field-input" type="number" value="${formData.feetSold}" oninput="setField('feetSold',this.value)" placeholder="0" />
+        </div>
+        <div class="form-field">
+          <label>Feet Installed</label>
+          <input class="field-input" type="number" value="${formData.feetInstalled}" oninput="setField('feetInstalled',this.value)" placeholder="0" />
+        </div>
+        <div class="form-field">
+          <label>Over / Under</label>
+          <div class="field-readonly" style="color:${ouColor};">${ouText}</div>
+        </div>
+      </div>
+
+      <!-- FINANCIALS -->
+      <div class="section-header"><span class="section-title">Financials</span><div class="section-line"></div></div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Subtotal (before discount)</label>
+          <input class="field-input" type="number" value="${formData.subtotal}" oninput="setField('subtotal',this.value)" placeholder="0.00" />
+        </div>
+        <div class="form-field">
+          <label>Discount</label>
+          <input class="field-input" type="number" value="${formData.discount}" oninput="setField('discount',this.value)" placeholder="0.00" />
+        </div>
+        <div class="form-field">
+          <label>Total Cost (auto)</label>
+          <input class="field-input highlight" type="number" value="${formData.totalCost}" oninput="setField('totalCost',this.value)" placeholder="0.00" />
+        </div>
+        <div class="form-field">
+          <label>PPF Sold (auto)</label>
+          <input class="field-input highlight" type="number" value="${formData.ppfSold}" oninput="setField('ppfSold',this.value)" placeholder="$/ft" />
+        </div>
+        <div class="form-field">
+          <label>Cost of Parts</label>
+          <input class="field-input" type="number" value="${formData.costOfParts}" oninput="setField('costOfParts',this.value)" placeholder="0.00" />
+        </div>
+        <div class="form-field">
+          <label>Payment Type</label>
+          ${selectHtml("formData.paymentType","paymentType",[""].concat(PAYMENT_OPTS),formData.paymentType)}
+        </div>
+      </div>
+
+      <!-- DATES -->
+      <div class="section-header"><span class="section-title">Dates</span><div class="section-line"></div></div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Deposit Date</label>
+          <input class="field-input" type="date" value="${formData.depositDate}" onchange="setField('depositDate',this.value)" />
+        </div>
+        <div class="form-field">
+          <label style="color:${formErrors.installDate?'var(--red)':'var(--muted)'}">Install Date *</label>
+          <input class="field-input${formErrors.installDate?' error-border':''}" type="date" value="${formData.installDate}" onchange="setField('installDate',this.value)" />
+          ${formErrors.installDate?`<span class="field-error">${formErrors.installDate}</span>`:""}
+        </div>
+        <div class="form-field">
+          <label>Final Payment Date</label>
+          <input class="field-input" type="date" value="${formData.finalPaymentDate}" onchange="setField('finalPaymentDate',this.value)" />
+        </div>
+      </div>
+
+      <!-- COMMISSION -->
+      <div class="section-header"><span class="section-title">Commission</span><div class="section-line"></div></div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Commission %</label>
+          ${selectHtml("formData.commissionPct","commissionPct",COMM_PCTS,formData.commissionPct)}
+        </div>
+        <div class="form-field">
+          <label>Total Commission (auto)</label>
+          <div class="field-readonly" style="color:var(--teal);">${formData.totalCost?fmt$(fCalc.comm):"—"}</div>
+        </div>
+        <div class="form-field">
+          <label>1st Commission — 50% (auto)</label>
+          <div class="field-readonly" style="color:var(--teal);">${formData.totalCost?fmt$(fCalc.half):"—"}</div>
+        </div>
+        <div class="form-field">
+          <label>1st Comm Paid?</label>
+          ${toggleHtml("firstCommissionPaid",formData.firstCommissionPaid)}
+        </div>
+        <div class="form-field">
+          <label>1st Comm Date</label>
+          <input class="field-input" type="date" value="${formData.firstCommissionDate}" onchange="setField('firstCommissionDate',this.value)" />
+        </div>
+        <div class="form-field">
+          <label>Final Comm Paid?</label>
+          ${toggleHtml("finalCommissionPaid",formData.finalCommissionPaid)}
+        </div>
+        <div class="form-field">
+          <label>Final Comm Date</label>
+          <input class="field-input" type="date" value="${formData.finalCommissionDate}" onchange="setField('finalCommissionDate',this.value)" />
+        </div>
+        <div class="form-field">
+          <label>Final Payment Received?</label>
+          ${toggleHtml("finalPaymentPaid",formData.finalPaymentPaid)}
+        </div>
+      </div>
+
+      <!-- NOTES -->
+      <div class="section-header"><span class="section-title">Notes</span><div class="section-line"></div></div>
+      <div class="form-grid">
+        <div class="form-field span3">
+          <label>Notes</label>
+          <textarea class="field-input" oninput="setField('notes',this.value)" placeholder="Any additional notes…">${esc(formData.notes)}</textarea>
+        </div>
+      </div>
+
+      <!-- BUTTONS -->
+      <div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap;">
+        <button class="btn-primary bhov" onclick="handleSave()">${editingId?"UPDATE JOB":"SAVE JOB"}</button>
+        <button class="btn-ghost" onclick="clearForm()">Clear</button>
+        <button class="btn-ghost" onclick="switchView('list')">View Jobs</button>
+      </div>
+    </div>
+  `;
+}
+
+function selectHtml(_, field, options, current) {
+  return `<select class="field-select" style="color:${current?'var(--white)':'var(--muted)'};" onchange="setField('${field}',this.value)">
+    ${options.map(o=>`<option value="${esc(o)}" ${o===current?"selected":""}>${o||"— Select —"}</option>`).join("")}
+  </select>`;
+}
+
+function toggleHtml(field, val) {
+  return `<button type="button" class="toggle-btn" onclick="setField('${field}',${!val})"
+    style="border:1px solid ${val?"rgba(76,175,125,0.53)":"var(--border)"};background:${val?"#0d2a1a":"var(--bg)"};color:${val?"var(--green)":"var(--muted)"};">
+    <div class="toggle-box" style="border:2px solid ${val?"var(--green)":"var(--dim)"};background:${val?"var(--green)":"transparent"};">${val?"✓":""}</div>
+    ${val?"Yes":"No"}
+  </button>`;
+}
+
+function toggleCrew() { crewOpen = !crewOpen; renderForm(); }
+function toggleCrewMember(name) {
+  const sel = formData.crew ? formData.crew.split("/").map(s=>s.trim()).filter(Boolean) : [];
+  const next = sel.includes(name) ? sel.filter(s=>s!==name) : [...sel,name];
+  formData.crew = next.join("/");
+  renderForm();
+}
+
+/* ══════════════════════════════════════════════════
+   SAVE / EDIT / DELETE
+══════════════════════════════════════════════════ */
+function handleSave() {
+  formErrors = {};
+  if (!formData.customer.trim()) formErrors.customer = "Required";
+  if (!formData.jobNumber.trim()) formErrors.jobNumber = "Required";
+  if (!formData.installDate) formErrors.installDate = "Required";
+  if (Object.keys(formErrors).length) { renderForm(); return; }
+
+  const job = {
+    ...formData,
+    id: editingId || uid(),
+    month: activeMonth,
+    createdAt: editingId ? (jobs.find(j=>j.id===editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+  };
+
+  if (editingId) {
+    jobs = jobs.map(j => j.id === editingId ? job : j);
+  } else {
+    jobs.push(job);
+  }
+  saveJobs();
+  editingId = null;
+  formData = blankForm();
+  formErrors = {};
+  crewOpen = false;
+  renderMonthTabs();
+  showToast("✓ Job Saved!");
+  switchView("list");
+}
+
+function handleEdit(id) {
+  const job = jobs.find(j=>j.id===id);
+  if (!job) return;
+  editingId = id;
+  formData = { ...blankForm(), ...job };
+  crewOpen = false;
+  document.querySelector('[data-view="add"]').textContent = "✏ Edit Job";
+  switchView("add");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function handleDelete(id) {
+  if (!confirm("Delete this job? This cannot be undone.")) return;
+  jobs = jobs.filter(j=>j.id!==id);
+  saveJobs();
+  renderMonthTabs();
+  switchView("list");
+}
+
+function clearForm() {
+  formData = blankForm();
+  formErrors = {};
+  editingId = null;
+  crewOpen = false;
+  renderForm();
+}
+
+/* ══════════════════════════════════════════════════
+   JOB LIST
+══════════════════════════════════════════════════ */
+function getMonthJobs(search) {
+  return jobs.filter(j => j.month === activeMonth && (!search ||
+    j.customer.toLowerCase().includes(search.toLowerCase()) ||
+    String(j.jobNumber).includes(search) ||
+    (j.salesman||"").toLowerCase().includes(search.toLowerCase())
+  ));
+}
+
+let listSearch = "";
+function renderList() {
+  const mj = getMonthJobs(listSearch);
+  document.getElementById("view-list").innerHTML = `
+    <div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+        <input value="${esc(listSearch)}" oninput="listSearch=this.value;renderList();" placeholder="Search customer, job #, salesman…"
+          style="flex:1 1 220px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--white);font-size:0.875rem;font-family:inherit;" />
+        <span style="color:var(--muted);font-size:0.76rem;white-space:nowrap;">${mj.length} job${mj.length!==1?"s":""}</span>
+      </div>
+      ${mj.length===0 ? `
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">No jobs this month</div>
+          <button class="btn-primary" onclick="startNew()" style="margin-top:12px;padding:9px 20px;font-size:0.875rem;">+ Add First Job</button>
+        </div>
+      ` : `
+        <div class="table-wrap">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Job #</th><th>Customer</th><th>Install</th><th>Salesman</th><th>Crew</th>
+                  <th class="right">Ft Sold</th><th class="right">Ft Inst</th><th class="right">Over/Under</th>
+                  <th class="right">Revenue</th><th class="right">PPF</th><th>Product</th>
+                  <th class="right">Commission</th><th>Status</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${mj.map((job,i) => {
+                  const {comm,ou,total} = calcJob(job);
+                  const hasInst = parseFloat(job.feetInstalled)>0;
+                  const ouText = hasInst?(ou===0?"Even":(ou>0?"+":"")+ou+" ft"):"—";
+                  const ouColor = ou==null?"var(--muted)":ou>0?"var(--green)":ou<0?"var(--red)":"var(--muted)";
+                  return `<tr class="hov" onclick="viewDetail('${job.id}')">
+                    <td style="color:var(--teal);font-weight:900;">${esc(job.jobNumber)}</td>
+                    <td style="font-weight:800;color:var(--white);white-space:nowrap;">${esc(job.customer)}</td>
+                    <td style="color:var(--light);white-space:nowrap;">${fmtDate(job.installDate)}</td>
+                    <td><span class="badge badge-teal">${esc(job.salesman||"—")}</span></td>
+                    <td style="color:var(--light);font-size:0.78rem;">${esc(job.crew||"—")}</td>
+                    <td class="right" style="color:var(--light);">${job.feetSold||"—"}</td>
+                    <td class="right" style="color:var(--light);">${job.feetInstalled||"—"}</td>
+                    <td class="right" style="font-weight:700;color:${ouColor};">${ouText}</td>
+                    <td class="right" style="font-weight:900;color:var(--white);">${fmt$(total)}</td>
+                    <td class="right" style="color:var(--light);">${job.ppfSold?"$"+Number(job.ppfSold).toFixed(2):"—"}</td>
+                    <td style="color:var(--light);font-size:0.76rem;">${esc(job.product||"—")}</td>
+                    <td class="right" style="color:#7eeae6;font-weight:700;">${fmt$(comm)}</td>
+                    <td><span class="${job.finalPaymentPaid?'status-paid':'status-pending'}">${job.finalPaymentPaid?"PAID":"PENDING"}</span></td>
+                    <td><button class="btn-edit-sm" onclick="event.stopPropagation();handleEdit('${job.id}')">Edit</button></td>
+                  </tr>`;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function viewDetail(id) {
+  detailJobId = id;
+  switchView("detail");
+}
+
+/* ══════════════════════════════════════════════════
+   JOB DETAIL
+══════════════════════════════════════════════════ */
+function renderDetail() {
+  const job = jobs.find(j=>j.id===detailJobId);
+  if (!job) { switchView("list"); return; }
+  const {total,comm,half,ou,ppfA} = calcJob(job);
+  const ouText = ou!=null?(ou===0?"Even":(ou>0?"+":"")+ou+" ft"):"—";
+
+  const fields = [
+    ["Salesman", job.salesman||"—"],
+    ["Crew", job.crew||"—"],
+    ["Product", job.product||"—"],
+    ["Track Color", job.trackColor||"—"],
+    ["Payment Type", job.paymentType||"—"],
+    ["Feet Sold", fmtFt(job.feetSold)],
+    ["Feet Installed", fmtFt(job.feetInstalled)],
+    ["Over/Under", ouText],
+    ["Deposit Date", fmtDate(job.depositDate)],
+    ["Install Date", fmtDate(job.installDate)],
+    ["Final Pmt Date", fmtDate(job.finalPaymentDate)],
+    ["Subtotal", fmt$(job.subtotal)],
+    ["Discount", fmt$(job.discount)],
+    ["Total Cost", fmt$(total)],
+    ["Cost of Parts", fmt$(job.costOfParts)],
+    ["PPF Sold", job.ppfSold?"$"+Number(job.ppfSold).toFixed(2):"—"],
+    ["PPF Actual", ppfA?"$"+ppfA.toFixed(2):"—"],
+    ["Commission %", (job.commissionPct||"0")+"%"],
+    ["Total Commission", fmt$(comm)],
+    ["1st Comm Paid?", job.firstCommissionPaid?"✓ Paid "+fmtDate(job.firstCommissionDate):"Unpaid — "+fmt$(half)],
+    ["Final Comm Paid?", job.finalCommissionPaid?"✓ Paid "+fmtDate(job.finalCommissionDate):"Unpaid — "+fmt$(half)],
+    ["Final Payment", job.finalPaymentPaid?"✓ Received":"Not received"],
+  ];
+
+  document.getElementById("view-detail").innerHTML = `
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn-ghost" style="padding:6px 12px;" onclick="switchView('list')">← Jobs</button>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.3rem;">${esc(job.customer)}</span>
+        <span style="color:var(--teal);font-weight:700;font-size:0.9rem;">Job #${esc(job.jobNumber)}</span>
+        <span class="${job.finalPaymentPaid?'status-paid':'status-pending'}">${job.finalPaymentPaid?"✓ PAID":"PENDING"}</span>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="btn-sm bhov" onclick="handleEdit('${job.id}')">✏ Edit</button>
+          <button style="padding:7px 12px;border-radius:8px;border:1px solid rgba(224,92,92,0.27);background:#1a0e0e;color:var(--red);cursor:pointer;font-weight:700;font-size:0.82rem;font-family:inherit;" onclick="handleDelete('${job.id}')">🗑 Delete</button>
+        </div>
+      </div>
+      <div class="detail-grid">
+        ${fields.map(([lbl,val])=>`
+          <div class="detail-card">
+            <div class="detail-lbl">${lbl}</div>
+            <div class="detail-val">${esc(String(val))}</div>
+          </div>
+        `).join("")}
+        ${job.notes?`
+          <div class="detail-card full" style="border-color:rgba(0,212,200,0.27);">
+            <div class="detail-lbl" style="color:var(--teal);">Notes</div>
+            <div style="font-size:0.875rem;color:var(--light);">${esc(job.notes)}</div>
+          </div>
+        `:""}
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════════════ */
+function renderDashboard() {
+  const mj = jobs.filter(j=>j.month===activeMonth);
+  const salesMap = {};
+  mj.forEach(j => {
+    const s = j.salesman||"Unassigned";
+    if (!salesMap[s]) salesMap[s]={name:s,jobs:0,rev:0,comm:0};
+    salesMap[s].jobs++;
+    salesMap[s].rev += calcJob(j).total;
+    salesMap[s].comm += calcJob(j).comm;
+  });
+  const salesRows = Object.values(salesMap).sort((a,b)=>b.rev-a.rev);
+  const maxRev = salesRows[0]?.rev||1;
+  const pending = mj.filter(j=>!j.firstCommissionPaid||!j.finalCommissionPaid);
+
+  document.getElementById("view-dashboard").innerHTML = `
+    <div class="dash-grid">
+      ${salesRows.length>0?`
+        <div class="dash-card">
+          <div class="dash-title">Salesman Breakdown</div>
+          ${salesRows.map(s=>`
+            <div style="margin-bottom:14px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                <span style="font-weight:700;color:var(--white);">${esc(s.name)}</span>
+                <span style="color:var(--teal);font-weight:800;">${fmt$(s.rev)}</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" style="width:${(s.rev/maxRev*100).toFixed(1)}%;"></div></div>
+              <div style="display:flex;gap:12px;margin-top:3px;">
+                <span style="font-size:0.7rem;color:var(--muted);">${s.jobs} job${s.jobs!==1?"s":""}</span>
+                <span style="font-size:0.7rem;color:#7eeae6;">Comm: ${fmt$(s.comm)}</span>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `:""}
+      <div class="dash-card">
+        <div class="dash-title">Pending Commissions</div>
+        ${pending.length===0?`<div style="color:var(--green);font-weight:700;padding:10px 0;">✓ All commissions paid!</div>`
+        :pending.map(j=>{
+          const {half}=calcJob(j);
+          return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-weight:700;font-size:0.85rem;color:var(--white);">${esc(j.customer)}</div>
+              <div style="font-size:0.7rem;color:var(--muted);margin-top:2px;">${esc(j.salesman||"Unassigned")} · Job #${esc(j.jobNumber)}</div>
+            </div>
+            <div style="text-align:right;">
+              ${!j.firstCommissionPaid?`<div style="font-size:0.76rem;color:var(--teal);">1st: ${fmt$(half)}</div>`:""}
+              ${!j.finalCommissionPaid?`<div style="font-size:0.76rem;color:var(--teal);">Final: ${fmt$(half)}</div>`:""}
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════════
+   WEEKLY EXPORT TO EXCEL
+══════════════════════════════════════════════════ */
+function getWeekRanges(month) {
+  // Get all jobs for month, group by ISO week
+  const mj = jobs.filter(j=>j.month===month && j.installDate);
+  const weekMap = {};
+  mj.forEach(j => {
+    const d = new Date(j.installDate);
+    // Get Monday of that week
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day===0?-6:1);
+    const mon = new Date(d.setDate(diff));
+    const key = mon.toISOString().slice(0,10);
+    if (!weekMap[key]) weekMap[key] = [];
+    weekMap[key].push(j);
+  });
+  return weekMap;
+}
+
+function openWeeklyExportModal() {
+  const weekMap = getWeekRanges(activeMonth);
+  const keys = Object.keys(weekMap).sort();
+  const list = document.getElementById("week-list");
+
+  if (keys.length === 0) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:0.875rem;padding:10px 0;">No jobs with install dates found for ${activeMonth}.</div>`;
+  } else {
+    list.innerHTML = keys.map(key => {
+      const weekJobs = weekMap[key];
+      const mon = new Date(key);
+      const sun = new Date(key);
+      sun.setDate(sun.getDate()+6);
+      const label = `Week of ${mon.toLocaleDateString("en-US",{month:"short",day:"numeric"})} – ${sun.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}`;
+      const rev = weekJobs.reduce((s,j)=>s+calcJob(j).total,0);
+      return `<div class="week-option" onclick="exportWeek('${key}')">
+        <div>
+          <div class="week-option-label">${label}</div>
+          <div class="week-option-count">${weekJobs.length} job${weekJobs.length!==1?"s":""} · ${fmt$(rev)} revenue</div>
+        </div>
+        <span style="color:var(--teal);font-weight:700;font-size:0.82rem;">📥 Export</span>
+      </div>`;
+    }).join("");
+  }
+
+  document.getElementById("modal-overlay").classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+}
+
+function exportWeek(weekKey) {
+  const weekMap = getWeekRanges(activeMonth);
+  const weekJobs = weekMap[weekKey] || [];
+  const mon = new Date(weekKey);
+  const sun = new Date(weekKey);
+  sun.setDate(sun.getDate()+6);
+  const label = `Week_${mon.toLocaleDateString("en-US",{month:"short",day:"numeric"}).replace(" ","")}_to_${sun.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}).replace(/[ ,]/g,"_")}`;
+  doExport(weekJobs, label);
+  closeModal();
+}
+
+function exportAllMonth() {
+  const mj = jobs.filter(j=>j.month===activeMonth);
+  doExport(mj, activeMonth.replace(" ","_"));
+  closeModal();
+}
+
+function doExport(jobList, label) {
+  if (jobList.length === 0) { alert("No jobs to export."); return; }
+
+  const rows = jobList.map(j => {
+    const {total,comm,half,ou,ppfA} = calcJob(j);
+    return {
+      "Customer": j.customer,
+      "Job #": j.jobNumber,
+      "Salesman": j.salesman,
+      "Crew": j.crew,
+      "Product": j.product||"",
+      "Track Color": j.trackColor,
+      "Feet Sold": j.feetSold ? Number(j.feetSold) : "",
+      "Feet Installed": j.feetInstalled ? Number(j.feetInstalled) : "",
+      "Over/Under (ft)": ou ?? "",
+      "Subtotal": j.subtotal ? Number(j.subtotal) : "",
+      "Discount": j.discount ? Number(j.discount) : "",
+      "Total Cost": total||"",
+      "PPF Sold": j.ppfSold ? Number(j.ppfSold) : "",
+      "PPF Actual": ppfA||"",
+      "Cost of Parts": j.costOfParts ? Number(j.costOfParts) : "",
+      "Payment Type": j.paymentType,
+      "Deposit Date": j.depositDate,
+      "Install Date": j.installDate,
+      "Final Pmt Date": j.finalPaymentDate,
+      "Final Paid?": j.finalPaymentPaid?"Yes":"No",
+      "Comm %": j.commissionPct,
+      "Total Commission": comm,
+      "1st Commission": half,
+      "1st Comm Paid?": j.firstCommissionPaid?"Yes":"No",
+      "1st Comm Date": j.firstCommissionDate,
+      "Final Commission": half,
+      "Final Comm Paid?": j.finalCommissionPaid?"Yes":"No",
+      "Final Comm Date": j.finalCommissionDate,
+      "Notes": j.notes,
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // Auto-fit column widths
+  const cols = Object.keys(rows[0]||{});
+  ws["!cols"] = cols.map(key => {
+    const maxLen = Math.max(key.length, ...rows.map(r=>String(r[key]||"").length));
+    return { wch: Math.min(maxLen+2, 40) };
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, label.slice(0,31));
+  XLSX.writeFile(wb, `Nexwave_${label}.xlsx`);
+  showToast("📥 Excel file downloaded!");
+}
+
+/* ══════════════════════════════════════════════════
+   UTILITIES
+══════════════════════════════════════════════════ */
+function esc(str) {
+  if (str == null) return "";
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  setTimeout(()=>{ t.style.display="none"; }, 2500);
+}
+
+/* ══════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════ */
+jobs = loadJobs();
+renderMonthTabs();
+renderCurrentView();
+</script>
+</body>
+</html>
