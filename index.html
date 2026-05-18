@@ -645,6 +645,10 @@
     .week-option-label { font-weight: 700; font-size: 0.88rem; }
     .week-option-count { font-size: 0.75rem; color: var(--muted); }
 
+    /* Numeric only fields - hide spinner arrows */
+    input.numeric-only::-webkit-inner-spin-button,
+    input.numeric-only::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input.numeric-only { -moz-appearance: textfield; }
     @media (max-width: 600px) {
       #header-inner { gap: 8px; }
       #logo-top { font-size: 1.1rem; letter-spacing: 1.5px; }
@@ -929,24 +933,63 @@ function blankForm() {
   };
 }
 
+// Fields that only need a surgical calc update (no full re-render)
+const CALC_FIELDS = ["subtotal","discount","totalCost","feetSold","feetInstalled","commissionPct","costOfParts"];
+// Fields that require a full re-render (toggles, dropdowns, crew)
+const RERENDER_FIELDS = ["finalPaymentPaid","firstCommissionPaid","finalCommissionPaid","salesman","product","trackColor","paymentType","crew","commissionPct"];
+
 function setField(field, value) {
   formData[field] = value;
   delete formErrors[field];
 
-  // Auto-calc totalCost
+  // Auto-calc totalCost from subtotal - discount
   if (field === "subtotal" || field === "discount") {
     const sub = parseFloat(field==="subtotal"?value:formData.subtotal)||0;
     const disc = parseFloat(field==="discount"?value:formData.discount)||0;
     formData.totalCost = String(+(Math.max(0,sub-disc)).toFixed(2));
+    // Sync totalCost input visually without re-render
+    const tcEl = document.getElementById("field-totalCost");
+    if (tcEl) tcEl.value = formData.totalCost;
   }
-  // Auto-calc PPF
+
+  // Auto-calc PPF sold
   const cost = parseFloat(formData.totalCost)||0;
   const ft = parseFloat(formData.feetSold)||0;
   if (["totalCost","subtotal","discount","feetSold"].includes(field) && cost>0 && ft>0) {
     formData.ppfSold = String(+(cost/ft).toFixed(2));
+    const ppfEl = document.getElementById("field-ppfSold");
+    if (ppfEl) ppfEl.value = formData.ppfSold;
   }
 
-  renderForm();
+  // Always update the calculated read-only display fields
+  updateCalcDisplays();
+
+  // Only fully re-render for toggles and dropdowns
+  if (RERENDER_FIELDS.includes(field)) {
+    renderForm();
+  }
+}
+
+function updateCalcDisplays() {
+  const fCalc = calcJob(formData);
+
+  // Over/Under
+  const ouEl = document.getElementById("display-ou");
+  if (ouEl) {
+    const ouText = fCalc.ou != null
+      ? (fCalc.ou===0?"Even":(fCalc.ou>0?"+":"")+fCalc.ou+" ft") : "—";
+    const ouColor = fCalc.ou==null?"var(--muted)":fCalc.ou>0?"var(--green)":fCalc.ou<0?"var(--red)":"var(--muted)";
+    ouEl.textContent = ouText;
+    ouEl.style.color = ouColor;
+  }
+
+  // Total Commission
+  const commEl = document.getElementById("display-comm");
+  if (commEl) commEl.textContent = formData.totalCost ? fmt$(fCalc.comm) : "—";
+
+  // 1st Commission (half)
+  const halfEl = document.getElementById("display-half");
+  if (halfEl) halfEl.textContent = formData.totalCost ? fmt$(fCalc.half) : "—";
 }
 
 /* ══════════════════════════════════════════════════
@@ -980,7 +1023,7 @@ function renderForm() {
         </div>
         <div class="form-field">
           <label style="color:${formErrors.jobNumber?'var(--red)':'var(--muted)'}">Job Number *</label>
-          <input class="field-input${formErrors.jobNumber?' error-border':''}" value="${esc(formData.jobNumber)}" oninput="setField('jobNumber',this.value)" placeholder="e.g. 1042" />
+          <input class="field-input numeric-only${formErrors.jobNumber?' error-border':''}" type="number" min="0" value="${formData.jobNumber}" oninput="setField('jobNumber',this.value)" onkeydown="return blockNonNumeric(event)" placeholder="e.g. 1042" />
           ${formErrors.jobNumber?`<span class="field-error">${formErrors.jobNumber}</span>`:""}
         </div>
         <div class="form-field">
@@ -1021,15 +1064,15 @@ function renderForm() {
       <div class="form-grid">
         <div class="form-field">
           <label>Feet Sold</label>
-          <input class="field-input" type="number" value="${formData.feetSold}" oninput="setField('feetSold',this.value)" placeholder="0" />
+          <input class="field-input numeric-only" type="number" min="0" value="${formData.feetSold}" oninput="setField('feetSold',this.value)" onkeydown="return blockNonNumeric(event)" placeholder="0" />
         </div>
         <div class="form-field">
           <label>Feet Installed</label>
-          <input class="field-input" type="number" value="${formData.feetInstalled}" oninput="setField('feetInstalled',this.value)" placeholder="0" />
+          <input class="field-input numeric-only" type="number" min="0" value="${formData.feetInstalled}" oninput="setField('feetInstalled',this.value)" onkeydown="return blockNonNumeric(event)" placeholder="0" />
         </div>
         <div class="form-field">
           <label>Over / Under</label>
-          <div class="field-readonly" style="color:${ouColor};">${ouText}</div>
+          <div id="display-ou" class="field-readonly" style="color:${ouColor};">${ouText}</div>
         </div>
       </div>
 
@@ -1038,23 +1081,23 @@ function renderForm() {
       <div class="form-grid">
         <div class="form-field">
           <label>Subtotal (before discount)</label>
-          <input class="field-input" type="number" value="${formData.subtotal}" oninput="setField('subtotal',this.value)" placeholder="0.00" />
+          <input class="field-input numeric-only" type="number" min="0" step="0.01" value="${formData.subtotal}" oninput="setField('subtotal',this.value)" onkeydown="return blockNonNumeric(event)" placeholder="0.00" />
         </div>
         <div class="form-field">
           <label>Discount</label>
-          <input class="field-input" type="number" value="${formData.discount}" oninput="setField('discount',this.value)" placeholder="0.00" />
+          <input class="field-input numeric-only" type="number" min="0" step="0.01" value="${formData.discount}" oninput="setField('discount',this.value)" onkeydown="return blockNonNumeric(event)" placeholder="0.00" />
         </div>
         <div class="form-field">
           <label>Total Cost (auto)</label>
-          <input class="field-input highlight" type="number" value="${formData.totalCost}" oninput="setField('totalCost',this.value)" placeholder="0.00" />
+          <input id="field-totalCost" class="field-input highlight" type="number" value="${formData.totalCost}" oninput="setField('totalCost',this.value)" placeholder="0.00" />
         </div>
         <div class="form-field">
           <label>PPF Sold (auto)</label>
-          <input class="field-input highlight" type="number" value="${formData.ppfSold}" oninput="setField('ppfSold',this.value)" placeholder="$/ft" />
+          <input id="field-ppfSold" class="field-input highlight" type="number" value="${formData.ppfSold}" oninput="setField('ppfSold',this.value)" placeholder="$/ft" />
         </div>
         <div class="form-field">
           <label>Cost of Parts</label>
-          <input class="field-input" type="number" value="${formData.costOfParts}" oninput="setField('costOfParts',this.value)" placeholder="0.00" />
+          <input class="field-input numeric-only" type="number" min="0" step="0.01" value="${formData.costOfParts}" oninput="setField('costOfParts',this.value)" onkeydown="return blockNonNumeric(event)" placeholder="0.00" />
         </div>
         <div class="form-field">
           <label>Payment Type</label>
@@ -1098,11 +1141,11 @@ function renderForm() {
         </div>
         <div class="form-field">
           <label>Total Commission (auto)</label>
-          <div class="field-readonly" style="color:var(--teal);">${formData.totalCost?fmt$(fCalc.comm):"—"}</div>
+          <div id="display-comm" class="field-readonly" style="color:var(--teal);">${formData.totalCost?fmt$(fCalc.comm):"—"}</div>
         </div>
         <div class="form-field">
           <label>1st Commission — 50% (auto)</label>
-          <div class="field-readonly" style="color:var(--teal);">${formData.totalCost?fmt$(fCalc.half):"—"}</div>
+          <div id="display-half" class="field-readonly" style="color:var(--teal);">${formData.totalCost?fmt$(fCalc.half):"—"}</div>
         </div>
         <div class="form-field">
           <label>1st Comm Paid?</label>
@@ -1565,6 +1608,23 @@ function showToast(msg) {
   t.textContent = msg;
   t.style.display = "block";
   setTimeout(()=>{ t.style.display="none"; }, 2500);
+}
+
+/* ══════════════════════════════════════════════════
+   NUMERIC ONLY HELPER
+══════════════════════════════════════════════════ */
+function blockNonNumeric(e) {
+  // Allow: backspace, delete, tab, escape, enter, arrows, home, end
+  const allowed = [8,9,13,27,46,37,38,39,40,35,36];
+  // Allow: Ctrl/Cmd+A, C, V, X
+  if ((e.ctrlKey || e.metaKey) && [65,67,86,88].includes(e.keyCode)) return true;
+  // Allow numbers (top row + numpad)
+  if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) return true;
+  // Allow decimal point for dollar fields
+  if (e.keyCode === 190 || e.keyCode === 110) return true;
+  // Block everything else
+  if (!allowed.includes(e.keyCode)) { e.preventDefault(); return false; }
+  return true;
 }
 
 /* ══════════════════════════════════════════════════
