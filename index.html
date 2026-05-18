@@ -274,6 +274,48 @@
       font-size: 0.875rem;
       transition: border-color .15s;
     }
+    /* ── Date inputs - styled calendar picker ── */
+    input[type="date"].field-input {
+      padding: 0 10px;
+      cursor: pointer;
+      color-scheme: dark;
+      color: var(--light);
+    }
+    input[type="date"].field-input::-webkit-calendar-picker-indicator {
+      filter: invert(0.7) sepia(1) saturate(3) hue-rotate(130deg);
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      opacity: 0.85;
+      margin-left: 4px;
+    }
+    input[type="date"].field-input::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+    }
+    input[type="date"].field-input:not([value=""]):not([value]) {
+      color: var(--white);
+    }
+    /* Date wrapper with icon overlay for non-webkit browsers */
+    .date-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .date-wrap input[type="date"] {
+      width: 100%;
+      padding-right: 36px;
+    }
+    .date-wrap .cal-icon {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1rem;
+      pointer-events: none;
+      color: var(--teal);
+      opacity: 0.7;
+    }
+
     .field-input.highlight {
       border-color: rgba(0,212,200,0.53);
       color: var(--teal);
@@ -743,11 +785,13 @@ function getMonths() {
 }
 
 let monthDropdownOpen = false;
+let monthList = [];
 
 function toggleMonthDropdown() {
   monthDropdownOpen = !monthDropdownOpen;
   const btn = document.getElementById("month-dropdown-btn");
   const menu = document.getElementById("month-dropdown-menu");
+  if (!btn || !menu) return;
   btn.classList.toggle("open", monthDropdownOpen);
   menu.classList.toggle("open", monthDropdownOpen);
 }
@@ -760,30 +804,27 @@ function closeMonthDropdown() {
   if (menu) menu.classList.remove("open");
 }
 
-document.addEventListener("click", function(e) {
-  const wrap = document.getElementById("month-dropdown-wrap");
-  if (wrap && !wrap.contains(e.target)) closeMonthDropdown();
-});
-
-function renderMonthTabs() {
-  const months = getMonths();
-  const label = document.getElementById("month-dropdown-label");
-  const menu = document.getElementById("month-dropdown-menu");
-  if (label) label.textContent = activeMonth;
-  if (menu) {
-    menu.innerHTML = months.map(m => `
-      <div class="month-option${m === activeMonth ? " active" : ""}" onclick="selectMonth('${m}')">
-        ${m}${m === activeMonth ? " ✓" : ""}
-      </div>
-    `).join("");
-  }
-}
-
-function selectMonth(m) {
+function selectMonth(idx) {
+  const m = monthList[idx];
+  if (!m) return;
   activeMonth = m;
   closeMonthDropdown();
   renderMonthTabs();
   renderCurrentView();
+}
+
+function renderMonthTabs() {
+  monthList = getMonths();
+  const label = document.getElementById("month-dropdown-label");
+  const menu = document.getElementById("month-dropdown-menu");
+  if (label) label.textContent = activeMonth;
+  if (menu) {
+    menu.innerHTML = monthList.map((m, i) => `
+      <div class="month-option${m === activeMonth ? " active" : ""}" onclick="selectMonth(${i})">
+        ${m}${m === activeMonth ? " ✓" : ""}
+      </div>
+    `).join("");
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -1005,16 +1046,25 @@ function renderForm() {
       <div class="form-grid">
         <div class="form-field">
           <label>Deposit Date</label>
-          <input class="field-input" type="date" value="${formData.depositDate}" onchange="setField('depositDate',this.value)" />
+          <div class="date-wrap">
+            <input class="field-input" type="date" value="${formData.depositDate}" onchange="setField('depositDate',this.value)" />
+            <span class="cal-icon">📅</span>
+          </div>
         </div>
         <div class="form-field">
           <label style="color:${formErrors.installDate?'var(--red)':'var(--muted)'}">Install Date *</label>
-          <input class="field-input${formErrors.installDate?' error-border':''}" type="date" value="${formData.installDate}" onchange="setField('installDate',this.value)" />
+          <div class="date-wrap">
+            <input class="field-input${formErrors.installDate?' error-border':''}" type="date" value="${formData.installDate}" onchange="setField('installDate',this.value)" />
+            <span class="cal-icon">📅</span>
+          </div>
           ${formErrors.installDate?`<span class="field-error">${formErrors.installDate}</span>`:""}
         </div>
         <div class="form-field">
           <label>Final Payment Date</label>
-          <input class="field-input" type="date" value="${formData.finalPaymentDate}" onchange="setField('finalPaymentDate',this.value)" />
+          <div class="date-wrap">
+            <input class="field-input" type="date" value="${formData.finalPaymentDate}" onchange="setField('finalPaymentDate',this.value)" />
+            <span class="cal-icon">📅</span>
+          </div>
         </div>
       </div>
 
@@ -1039,7 +1089,10 @@ function renderForm() {
         </div>
         <div class="form-field">
           <label>1st Comm Date</label>
-          <input class="field-input" type="date" value="${formData.firstCommissionDate}" onchange="setField('firstCommissionDate',this.value)" />
+          <div class="date-wrap">
+            <input class="field-input" type="date" value="${formData.firstCommissionDate}" onchange="setField('firstCommissionDate',this.value)" />
+            <span class="cal-icon">📅</span>
+          </div>
         </div>
         <div class="form-field">
           <label>Final Comm Paid?</label>
@@ -1047,7 +1100,10 @@ function renderForm() {
         </div>
         <div class="form-field">
           <label>Final Comm Date</label>
-          <input class="field-input" type="date" value="${formData.finalCommissionDate}" onchange="setField('finalCommissionDate',this.value)" />
+          <div class="date-wrap">
+            <input class="field-input" type="date" value="${formData.finalCommissionDate}" onchange="setField('finalCommissionDate',this.value)" />
+            <span class="cal-icon">📅</span>
+          </div>
         </div>
         <div class="form-field">
           <label>Final Payment Received?</label>
@@ -1496,6 +1552,12 @@ function showToast(msg) {
 jobs = loadJobs();
 renderMonthTabs();
 renderCurrentView();
+
+// Close month dropdown when clicking outside — must run after DOM is ready
+document.addEventListener("click", function(e) {
+  const wrap = document.getElementById("month-dropdown-wrap");
+  if (wrap && !wrap.contains(e.target)) closeMonthDropdown();
+});
 </script>
 </body>
 </html>
